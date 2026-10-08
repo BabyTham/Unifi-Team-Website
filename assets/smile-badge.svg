@@ -1,0 +1,20 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="148" height="148" viewBox="0 0 148 148" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Badge" filter="url(#filter0_d_0_39)">
+<rect x="30" y="16" width="88" height="88" rx="44" fill="#FAF8F4"/>
+<path id="Eye L Wink" opacity="0" d="M57.95 45.3501L68.45 51.6001L57.95 57.8501" stroke="#FF6B00" stroke-width="3.4"/>
+<circle id="Eye L" cx="64.5" cy="49.5" r="6.5" fill="#FF6B00"/>
+<circle id="Eye R" cx="83.5" cy="49.5" r="6.5" fill="#FF6B00"/>
+<path id="Mouth" d="M58.5 60.5H89.5C89.5 69.06 82.56 76 74 76C65.44 76 58.5 69.06 58.5 60.5Z" fill="#FF6B00"/>
+</g>
+<defs>
+<filter id="filter0_d_0_39" x="0" y="0" width="148" height="148" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="14"/>
+<feGaussianBlur stdDeviation="15"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.0235294 0 0 0 0 0.00392157 0 0 0 0 0.227451 0 0 0 0.16 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_39"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_39" result="shape"/>
+</filter>
+</defs>
+</svg>
