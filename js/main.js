@@ -216,8 +216,14 @@
       photos: [["15", "Fifa World Cup Opening"], ["16", "GBM Team Building"], ["17", "GBM Team Building"], ["18", "Unifi Sport Day!!"]] },
     { name: "Luncheon", sub: "3 photos", layout: "three",
       photos: [["19", "Luncheon Time"], ["20", "Luncheon Time"], ["21", "Luncheon Time"]] },
-    { name: "Lets Meet offline", sub: "3 photos", layout: "three",
-      photos: [["22", "Group Photo"], ["23", "Smile"], ["24", ":)))"]] }
+    { name: "Lets Meet offline", sub: "4 photos", layout: "five",
+      photos: [
+        ["22", "Group Photo Brand, Marketing & Digital", { crop: { w: "110.86%", h: "111%", l: "-5.43%", t: "-5.5%" } }],
+        ["23", "Group Photo", { sh: 19.04 }],
+        ["24", "Sisters", { sh: 15.4 }],
+        ["25", "Ohana", { sh: 15.4 }],
+        ["26", "Smileee", { crop: { w: "101%", h: "202%", l: "2.43%", t: "-34.42%" } }]
+      ] }
   ];
 
   /* ------------------------------------------------------------------
@@ -515,18 +521,26 @@
     let photoNo = CHAPTERS.slice(0, i).reduce((n, ch) => n + ch.photos.length, 0);
     LAYOUT[c.layout].forEach((slotKey, n) => {
       const slot = SLOTS[slotKey];
-      const [file, caption] = c.photos[n];
+      const [file, caption, opts = {}] = c.photos[n];
       photoNo += 1;
       const fig = el("figure", "snap");
       fig.dataset.fit = String(slot.w);
       const vars = { bx: slot.bx, by: slot.by, bw: slot.bw, bh: slot.bh, w: slot.w, h: slot.h, pw: slot.pw, ph: slot.ph, k: slot.k || 1 };
       Object.entries(vars).forEach(([k, v]) => fig.style.setProperty(`--${k}`, v));
       fig.style.setProperty("--rot", `${slot.rot}deg`);
-      const img = el("img", "snap__photo");
+      if (opts.sh) fig.style.setProperty("--sh", `${opts.sh}px`);
+      const photo = el("span", "snap__photo");
+      const img = el("img");
       img.src = `assets/scrapbook/${file}.jpg`;
       img.alt = caption;
+      if (opts.crop) {
+        // Figma image crop: the photo is scaled/offset inside its frame
+        img.className = "is-cropped";
+        Object.assign(img.style, { width: opts.crop.w, height: opts.crop.h, left: opts.crop.l, top: opts.crop.t });
+      }
+      photo.appendChild(img);
       fig.append(
-        img,
+        photo,
         el("figcaption", "snap__caption", caption),
         el("span", "snap__num", String(photoNo).padStart(2, "0")),
         el("span", "snap__tape")
@@ -534,13 +548,17 @@
       chapter.appendChild(fig);
     });
 
-    const old = bookContent.firstElementChild;
-    if (old && !reduceMotion) {
-      old.classList.add("is-leaving");
-      setTimeout(() => old.remove(), 200);
-    } else if (old) {
-      old.remove();
-    }
+    // Clear every page still in the book, not just the first one: when pages are turned
+    // faster than the fade-out, earlier pages would otherwise be left stacked underneath.
+    Array.from(bookContent.children).forEach((old) => {
+      const isStacked = getComputedStyle(old).position === "absolute"; // single-column mobile layout isn't
+      if (reduceMotion || !isStacked || old.classList.contains("is-leaving")) {
+        old.remove();
+      } else {
+        old.classList.add("is-leaving");
+        setTimeout(() => old.remove(), 200);
+      }
+    });
     bookContent.appendChild(chapter);
 
     $(".book__page-num--l", book).textContent = String(i * 2 + 1).padStart(2, "0");
@@ -559,11 +577,21 @@
     if (focusTarget) focusTarget.focus();
   }
 
+  // Preload the remaining chapters once the scrapbook is opened, so pages turn instantly
+  // without downloading every (large) photo for visitors who never open it.
+  let preloaded = false;
+  const preloadScrapbook = () => {
+    if (preloaded) return;
+    preloaded = true;
+    CHAPTERS.forEach((c) => c.photos.forEach(([f]) => { new Image().src = `assets/scrapbook/${f}.jpg`; }));
+  };
+
   $("[data-open-scrapbook]") && $("[data-open-scrapbook]").addEventListener("click", () => {
     renderChapter(0, 1);
     openModal(scrapModal, $(".close-btn--book", scrapModal));
     scaleBook();
     fitAll();
+    setTimeout(preloadScrapbook, 600);
   });
   bookPrev.addEventListener("click", () => goChapter(-1));
   bookNext.addEventListener("click", () => goChapter(1));
@@ -571,11 +599,6 @@
     if (e.key === "ArrowRight") goChapter(1);
     if (e.key === "ArrowLeft") goChapter(-1);
   });
-
-  // Preload the scrapbook photos once the page is idle so chapters turn instantly.
-  const preload = () => CHAPTERS.forEach((c) => c.photos.forEach(([f]) => { new Image().src = `assets/scrapbook/${f}.jpg`; }));
-  if ("requestIdleCallback" in window) requestIdleCallback(preload, { timeout: 4000 });
-  else setTimeout(preload, 2500);
 
   /* ------------------------------------------------------------------
      Smile badge: wink on hover (CSS), squash → hop on click
@@ -587,7 +610,122 @@
       void badge.offsetWidth; // restart the animation
       badge.classList.add("is-hopping");
     });
-    badge.addEventListener("animationend", () => badge.classList.remove("is-hopping"));
+    badge.addEventListener("animationend", (e) => { if (e.animationName.startsWith("badge-")) badge.classList.remove("is-hopping"); });
+  }
+
+  /* ------------------------------------------------------------------
+     Entrance sequences
+     [data-seq] groups play once when they scroll into view ("load" plays on page load).
+     Each [data-reveal] item gets a delay: data-delay if set, otherwise
+     data-start + its position in the group × data-stagger. CSS does the motion.
+     ------------------------------------------------------------------ */
+  function countUp(el, delay) {
+    if (el.dataset.counted) return;
+    el.dataset.counted = "true";
+    const final = el.textContent.trim();
+    const match = final.match(/\d[\d,]*(?:\.\d+)?(?!.*\d)/); // the last number in the text
+    if (!match) return;
+    const raw = match[0];
+    const decimals = (raw.split(".")[1] || "").length;
+    const target = parseFloat(raw.replace(/,/g, ""));
+    const from = parseFloat(el.dataset.countFrom || "0");
+    const before = final.slice(0, match.index);
+    const after = final.slice(match.index + raw.length);
+    const format = (v) => before + v.toLocaleString("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      useGrouping: raw.includes(",")
+    }) + after;
+
+    // Screen readers get the real value; the ticking digits are decorative.
+    const live = el.ownerDocument.createElement("span");
+    live.setAttribute("aria-hidden", "true");
+    live.textContent = format(from);
+    const label = el.ownerDocument.createElement("span");
+    label.className = "sr-only";
+    label.textContent = final;
+    el.replaceChildren(live, label);
+
+    const duration = 1400;
+    setTimeout(() => {
+      const t0 = performance.now();
+      const tick = (now) => {
+        const p = Math.min(1, (now - t0) / duration);
+        const eased = 1 - Math.pow(1 - p, 3);
+        live.textContent = p < 1 ? format(from + (target - from) * eased) : final;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, delay);
+  }
+
+  function initMotion() {
+    if (!root.classList.contains("motion")) return; // no JS-driven motion (reduced motion / old browser)
+    window.__motionReady = true;
+
+    const groups = new Map($$("[data-seq]").map((g) => [g, []]));
+    const loose = [];
+    $$("[data-reveal]").forEach((el) => {
+      const group = el.hasAttribute("data-seq") ? el : el.parentElement.closest("[data-seq]");
+      (group ? groups.get(group) : loose).push(el);
+    });
+
+    function play(group, items) {
+      const start = Number(group.dataset.start) || 0;
+      const stagger = Number(group.dataset.stagger) || 80;
+      let index = 0;
+      group.classList.add("is-in");
+      items.forEach((el) => {
+        const delay = el.dataset.delay != null ? Number(el.dataset.delay) : start + index++ * stagger;
+        el.style.setProperty("--d", `${delay}ms`);
+        el.classList.add("is-in");
+        // Count only numbers that belong to this item (not ones inside nested items, e.g. tiles in a panel)
+        const counters = [el, ...$$("[data-count]", el)].filter((c) => c.matches("[data-count]") && c.closest("[data-reveal]") === el);
+        counters.forEach((c) => countUp(c, delay + 250));
+      });
+    }
+
+    const pending = new Map(); // element → items, for anything not played yet
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting || !pending.has(entry.target)) return;
+        play(entry.target, pending.get(entry.target));
+        pending.delete(entry.target);
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: "0px 0px -12% 0px" });
+
+    groups.forEach((items, group) => {
+      if (group.dataset.seq === "load") {
+        // Wait (briefly) for the web fonts so headlines don't swap mid-animation.
+        const fonts = document.fonts ? document.fonts.ready : Promise.resolve();
+        Promise.race([fonts, new Promise((r) => setTimeout(r, 450))]).then(() => setTimeout(() => play(group, items), 60));
+      } else {
+        pending.set(group, items);
+        observer.observe(group);
+      }
+    });
+    loose.forEach((el) => { pending.set(el, [el]); observer.observe(el); });
+
+    // The last few elements can sit inside the bottom margin even when fully scrolled down.
+    const flushAtBottom = () => {
+      if (!pending.size || window.innerHeight + window.scrollY < root.scrollHeight - 4) return;
+      pending.forEach((items, el) => {
+        if (el.getBoundingClientRect().top < window.innerHeight) {
+          play(el, items);
+          pending.delete(el);
+          observer.unobserve(el);
+        }
+      });
+    };
+    window.addEventListener("scroll", flushAtBottom, { passive: true });
+  }
+
+  try {
+    initMotion();
+  } catch (err) {
+    root.classList.remove("motion"); // never leave content hidden
+    throw err;
   }
 
   /* ------------------------------------------------------------------
