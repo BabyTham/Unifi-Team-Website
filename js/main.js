@@ -633,26 +633,39 @@
     area.classList.add("has-drag-cursor");
 
     const place = (e) => { cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`; };
+    const listening = new AbortController();
+    const on = (type, fn) => area.addEventListener(type, fn, { signal: listening.signal });
+    let downX = null;
 
-    area.addEventListener("pointerenter", (e) => {
+    // The hint is only needed until the visitor has tried dragging once; then it goes for good
+    // (until the page is reloaded) and the normal grab cursor takes over.
+    function retire() {
+      listening.abort();
+      cursor.remove();
+      area.classList.remove("has-drag-cursor");
+    }
+
+    on("pointerenter", (e) => {
       if (e.pointerType !== "mouse") return;
       place(e);
       cursor.classList.add("is-on");
     });
-    area.addEventListener("pointermove", (e) => {
+    on("pointermove", (e) => {
       if (e.pointerType !== "mouse") return;
+      if (downX !== null && Math.abs(e.clientX - downX) > 4) return retire();
       place(e);
       cursor.classList.toggle("is-link", !!e.target.closest("a, button"));
     });
-    area.addEventListener("pointerdown", (e) => {
+    on("pointerdown", (e) => {
       if (e.pointerType !== "mouse" || e.button !== 0) return;
+      downX = e.clientX;
       cursor.classList.add("is-down");
       label.textContent = "• •";
     });
-    const release = () => { cursor.classList.remove("is-down"); label.textContent = "← Drag →"; };
-    area.addEventListener("pointerup", release);
-    area.addEventListener("pointercancel", release);
-    area.addEventListener("pointerleave", (e) => {
+    const release = () => { downX = null; cursor.classList.remove("is-down"); label.textContent = "← Drag →"; };
+    on("pointerup", release);
+    on("pointercancel", release);
+    on("pointerleave", (e) => {
       if (e.pointerType !== "mouse") return;
       cursor.classList.remove("is-on", "is-link");
     });
