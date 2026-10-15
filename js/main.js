@@ -478,6 +478,9 @@
 
   /* ==================================================================
      8. ACHIEVEMENTS CAROUSEL
+     Drifts left one card every 4 s and loops seamlessly (the cards are
+     copied onto the end of the track). Hovering the cards pauses it;
+     the arrows slide one card. Reduced motion: arrows only.
      ================================================================== */
   const carousel = (function () {
     const rootEl = $("[data-carousel]");
@@ -487,50 +490,173 @@
     const items = $$(".hit", track);
     const prev = $("[data-prev]", rootEl);
     const next = $("[data-next]", rootEl);
-    let index = 0;
+    const count = items.length;
+    if (!count) return null;
 
-    function metrics() {
-      if (!items.length) return { step: 0, max: 0 };
-      const gap = parseFloat(getComputedStyle(track).columnGap) || 24;
-      const step = items[0].getBoundingClientRect().width + gap;
-      const visible = Math.max(1, Math.floor((viewport.clientWidth + gap + 1) / step));
-      return { step, max: Math.max(0, items.length - visible) };
-    }
+    const SECONDS_PER_CARD = 4;
+    const SLIDE_MS = 350;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    function update() {
-      const { step, max } = metrics();
-      index = Math.max(0, Math.min(index, max));
-      track.style.transform = `translateX(${-index * step}px)`;
-      prev.disabled = index === 0;
-      next.disabled = index === max;
-      items.forEach((item, i) => {
-        const inView = i >= index && i < index + (items.length - max);
-        item.setAttribute("aria-hidden", String(!inView));
+    // Copies of the cards after the originals, so the end of the list runs straight into the start.
+    // Enough copies to cover a wide screen even when there are only a few cards.
+    const copies = Math.max(1, Math.ceil(2400 / (count * 324)));
+    for (let c = 0; c < copies; c++) {
+      items.forEach((item) => {
+        const clone = item.cloneNode(true);
+        clone.removeAttribute("data-reveal");
+        clone.setAttribute("aria-hidden", "true");
+        clone.classList.add("hit--copy");
+        track.append(clone);
       });
     }
 
-    const go = (delta) => { index += delta; update(); };
+    let step = 324;      // card width + gap, in px (re-measured on resize)
+    let pos = 0;         // position in cards (0 → count, then wraps)
+    let slide = null;    // arrow animation: { from, to, start }
+    let hovering = false;
+    let visible = false;
+    let startAfter = 0;  // don't drift until the cards have finished coming in
+
+    function measure() {
+      const gap = parseFloat(getComputedStyle(track).columnGap) || 24;
+      step = items[0].getBoundingClientRect().width + gap;
+    }
+
+    function render() {
+      const wrapped = ((pos % count) + count) % count;
+      track.style.transform = `translateX(${(-wrapped * step).toFixed(2)}px)`;
+    }
+
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+    const paused = () => hovering || viewport.matches(":focus-visible") || reduceMotion.matches;
+
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(100, now - last); // a background tab shouldn't cause a jump
+      last = now;
+      if (drag) {
+        // the pointer is moving the strip
+      } else if (slide) {
+        const t = Math.min(1, (now - slide.start) / SLIDE_MS);
+        pos = slide.from + (slide.to - slide.from) * easeOut(t);
+        if (t === 1) slide = null;
+        render();
+      } else if (visible && now > startAfter && !paused()) {
+        pos += dt / (SECONDS_PER_CARD * 1000);
+        if (pos >= count) pos -= count;
+        render();
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function go(delta) {
+      const from = pos;
+      const to = (slide ? slide.to : pos) + delta; // quick double-clicks add up
+      slide = { from, to, start: performance.now() };
+    }
+
     prev.addEventListener("click", () => go(-1));
     next.addEventListener("click", () => go(1));
     viewport.addEventListener("keydown", (e) => {
       if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
       if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
     });
+    viewport.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") hovering = true; });
+    viewport.addEventListener("pointerleave", () => { hovering = false; });
 
-    // Swipe / drag
-    let startX = null;
-    viewport.addEventListener("pointerdown", (e) => { startX = e.clientX; });
-    viewport.addEventListener("pointerup", (e) => {
-      if (startX === null) return;
-      const dx = e.clientX - startX;
-      startX = null;
-      if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    // Drag with the mouse: the strip follows the pointer. Touch: a swipe moves one card.
+    let drag = null;       // { x, pos, moved } while the mouse button is down
+    let swipeX = null;
+    let justDragged = false;
+    viewport.addEventListener("click", (e) => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } }, true);
+    viewport.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse") { swipeX = e.clientX; return; }
+      if (e.button !== 0) return;
+      slide = null;
+      drag = { x: e.clientX, pos, moved: false };
+      viewport.setPointerCapture(e.pointerId);
+      viewport.classList.add("is-dragging");
     });
-    viewport.addEventListener("pointercancel", () => { startX = null; });
+    viewport.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 4) drag.moved = true;
+      pos = drag.pos - dx / step;
+      render();
+    });
+    function endDrag() {
+      if (!drag) return;
+      if (drag.moved) { // a drag isn't a click on whatever is under the mouse
+        justDragged = true;
+        setTimeout(() => { justDragged = false; }, 0);
+      }
+      drag = null;
+      viewport.classList.remove("is-dragging");
+    }
+    viewport.addEventListener("pointerup", (e) => {
+      if (swipeX !== null) {
+        const dx = e.clientX - swipeX;
+        swipeX = null;
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      }
+      endDrag();
+    });
+    viewport.addEventListener("pointercancel", () => { swipeX = null; endDrag(); });
+    viewport.addEventListener("dragstart", (e) => e.preventDefault()); // no ghost images of the photos
 
+    // Only drift while the section is on screen; the first time, wait for the cards' entrance.
+    new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible && !startAfter) startAfter = performance.now() + (root.classList.contains("motion") ? 1400 : 0);
+    }).observe(viewport);
+
+    function update() { measure(); render(); }
     update();
+    requestAnimationFrame(frame);
+    setupDragCursor(viewport);
     return { update };
   })();
+
+  /* "← Drag →" circle that follows the mouse over the card strip.
+     Mouse only (not touch screens) and not for people who prefer reduced motion. */
+  function setupDragCursor(area) {
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const cursor = el("div", "drag-cursor");
+    cursor.setAttribute("aria-hidden", "true");
+    const dot = el("div", "drag-cursor__dot");
+    const label = el("span", "drag-cursor__label", "← Drag →");
+    dot.append(label);
+    cursor.append(dot);
+    document.body.append(cursor);
+    area.classList.add("has-drag-cursor");
+
+    const place = (e) => { cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`; };
+
+    area.addEventListener("pointerenter", (e) => {
+      if (e.pointerType !== "mouse") return;
+      place(e);
+      cursor.classList.add("is-on");
+    });
+    area.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      place(e);
+      cursor.classList.toggle("is-link", !!e.target.closest("a, button"));
+    });
+    area.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      cursor.classList.add("is-down");
+      label.textContent = "• •";
+    });
+    const release = () => { cursor.classList.remove("is-down"); label.textContent = "← Drag →"; };
+    area.addEventListener("pointerup", release);
+    area.addEventListener("pointercancel", release);
+    area.addEventListener("pointerleave", (e) => {
+      if (e.pointerType !== "mouse") return;
+      cursor.classList.remove("is-on", "is-link");
+    });
+  }
 
   /* ==================================================================
      9. CYCLING POLAROIDS (Behind the scenes)

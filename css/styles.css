@@ -794,7 +794,34 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .hits__lead { margin-top: 48px; max-width: 330px; font-size: 16px; line-height: 24px; color: var(--muted-2); }
 .hits__carousel { min-width: 0; margin-top: 3px; }
 .hits__viewport { overflow: hidden; padding: 16px 0 60px; margin-bottom: -17px; outline-offset: -2px; touch-action: pan-y; }
-.hits__track { display: flex; gap: 24px; transition: transform .35s var(--ease-out); will-change: transform; }
+.hits__track { display: flex; gap: 24px; will-change: transform; }
+.hits__viewport.has-drag-cursor, .hits__viewport.has-drag-cursor * { cursor: none; }
+.hits__viewport.is-dragging { user-select: none; }
+
+/* "← Drag →" circle following the mouse over the cards (added by main.js, mouse only) */
+.drag-cursor { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; }
+.drag-cursor__dot {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  scale: .6;
+  transition: opacity .2s var(--ease-out), scale .2s var(--ease-out), width .2s var(--ease-out), height .2s var(--ease-out), margin .2s var(--ease-out);
+}
+.drag-cursor.is-on .drag-cursor__dot { opacity: 1; scale: 1; }
+.drag-cursor.is-on.is-down .drag-cursor__dot { scale: .85; }
+.drag-cursor.is-link .drag-cursor__dot { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
+.drag-cursor.is-link .drag-cursor__label { display: none; }
 .hit { flex: 0 0 300px; }
 .hit__card {
   position: relative;

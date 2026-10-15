@@ -388,13 +388,6 @@ window.SITE_CONTENT = {
      ------------------------------------------------------------------- */
   achievements: [
     {
-      title: "Marketing Excellence 2025",
-      tag: "TEAM RECOGNITION",
-      text: "Recognised among the Unifi and Unifi Business team after multiple Gold and Bronze wins across major 2025 campaigns.",
-      result: "Gold + Bronze campaign wins",
-      image: "images/achievements/marketing-excellence-2025.jpg"
-    },
-    {
       title: "IMPAK BIZ",
       tag: "FEATURED INITIATIVE",
       text: "End-to-end digital platform delivery spanning requirements, UI/UX, development, testing, deployment, production support and digital tracking.",

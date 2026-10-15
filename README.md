@@ -77,7 +77,9 @@ any other number shows them as a neat list instead. Long quotes shrink to fit th
 
 ### Add an achievement
 Put a landscape photo in `images/achievements/`, then copy an achievement block in `content.js` and edit it.
-The carousel takes any number of cards.
+The carousel takes any number of cards. It scrolls by itself (one card every 4 seconds, looping), pauses while the mouse is over it,
+and stays still for visitors who have "reduce motion" turned on. With a mouse it can also be dragged (a "← Drag →" circle follows the mouse).
+The speed is `SECONDS_PER_CARD` in `js/main.js`.
 
 ### Add a scrapbook chapter ("View our moments")
 1. Make a folder `images/scrapbook/chapter-07/` and add **1 to 5** photos named `01.jpg`, `02.jpg`, …
