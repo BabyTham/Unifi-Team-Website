@@ -38,24 +38,38 @@ window.SITE_CONTENT = {
       colour: "cream"
     },
     {
-      value: "0.62%",
-      title: "SLOF Conversion (vs. 9% eShop)",
+      value: "0.22% → 0.62%",
+      countFrom: 0.22,
+      title: "SLOF Conversion 2025 - 2026",
       text: "Better journey, clearer information, stronger calls to action.",
       colour: "orange"
     },
     {
-      value: "2,818+",
-      title: "Devices Sold Online (as of Aug 2026)",
-      text: "More choice, easier purchase, bigger smiles.",
+      value: "28%",
+      title: "Growth Organic Traffic (YoY)",
+      text: "Strong 28% YoY growth in organic traffic from SEO-enhanced pages.",
       colour: "blue"
     },
     {
-      value: "9%",
-      title: "Devices Sales from Online Exclusive",
+      value: "313%",
+      title: "Devices Sales from Online Channel 2024 - 2026",
       text: "Creating exclusive offers that drive online engagement.",
       colour: "indigo"
+    },
+    {
+      value: "13.9%",
+      title: "Digital Broadband Sales Increase 2025 - 2026",
+      text: "Growing digital contribution across the channel mix.",
+      colour: "cream"
+    },
+    {
+      value: "264%",
+      title: "Growth Online Tv Sales (Unifi TV)",
+      text: "More customers choosing to sign up for Unifi TV online.",
+      colour: "orange"
     }
   ],
+
 
 
   /* -------------------------------------------------------------------

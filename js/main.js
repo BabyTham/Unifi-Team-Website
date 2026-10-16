@@ -348,7 +348,7 @@
   }
 
   function fitStatValues() {
-    $$(".stat__value").forEach((v) => shrinkToFit(v, () => v.scrollWidth <= v.clientWidth + 1, 18));
+    $$(".stat__value").forEach((v) => shrinkToFit(v, () => v.scrollWidth <= v.clientWidth + 1, 14));
   }
 
   let resizeTimer = 0;
