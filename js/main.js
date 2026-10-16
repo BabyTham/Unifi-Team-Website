@@ -348,7 +348,10 @@
   }
 
   function fitStatValues() {
-    $$(".stat__value").forEach((v) => shrinkToFit(v, () => v.scrollWidth <= v.clientWidth + 1, 14));
+    $$(".stat__value").forEach((v) => {
+      shrinkToFit(v, () => v.scrollWidth <= v.clientWidth + 1, 14);
+      v.style.lineHeight = ""; // keep the full-size line box so a shrunk number stays level with its neighbours
+    });
   }
 
   let resizeTimer = 0;
@@ -963,6 +966,27 @@
     root.classList.remove("motion"); // never leave content hidden
     throw err;
   }
+
+  /* ==================================================================
+     12b. HERO POLAROID: click (or Enter / Space) to replay its intro
+     ================================================================== */
+  (function () {
+    const float = $(".hero-polaroid__float");
+    const card = $(".hero-polaroid");
+    if (!float || !card) return;
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", "Replay the polaroid animation");
+    function replay() {
+      float.classList.add("is-replaying");   // switches every animation off…
+      void float.offsetWidth;                // …lets the browser notice…
+      float.classList.remove("is-replaying"); // …and switching them back on starts them from the beginning
+    }
+    card.addEventListener("click", replay);
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); replay(); }
+    });
+  })();
 
   /* ==================================================================
      13. INIT

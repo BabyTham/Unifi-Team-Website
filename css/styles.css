@@ -148,7 +148,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   flex-direction: column;
   align-items: flex-start;
   gap: 18px;
+  pointer-events: none; /* this box spans the whole hero and would otherwise cover the polaroid */
 }
+.hero__copy > * { pointer-events: auto; }
 .hero__eyebrow {
   border: 1px solid var(--blue);
   border-radius: 999px;
@@ -218,6 +220,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   box-shadow: 0 30px 60px rgba(0, 0, 0, .45), 0 6px 14px rgba(0, 0, 0, .25);
   transform: rotate(-4deg);
 }
+.hero-polaroid { cursor: pointer; }
+.hero-polaroid:focus-visible { outline: 3px solid var(--blue); outline-offset: 6px; }
+.hero-polaroid__float.is-replaying, .hero-polaroid__float.is-replaying * { animation: none !important; }
 .hero-polaroid__photo {
   display: block;
   width: 100%;
