@@ -1,5 +1,5 @@
 /* =====================================================================
-   WEBSITE CONTENT  —  edit this file to update the websit
+   WEBSITE CONTENT  —  edit this file to update the website
    =====================================================================
 
    Everything that changes over time lives here: the impact numbers,
