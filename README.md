@@ -1,7 +1,7 @@
 # Unifi Digital Acquisition Team — website
 
 A one-page team showcase built from the Figma file *Unifi Team Website Revised*.
-It's plain HTML, CSS and JavaScript: no installs, no build step, nothing to compile.rr
+It's plain HTML, CSS and JavaScript: no installs, no build step, nothing to compile.
 
 ---
 
